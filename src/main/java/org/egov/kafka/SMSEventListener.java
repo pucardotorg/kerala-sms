@@ -1,0 +1,102 @@
+package org.egov.kafka;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
+import org.egov.kafka.contract.SMSRequest;
+import org.egov.model.Category;
+import org.egov.model.RequestContext;
+import org.egov.service.SmsService;
+import org.egov.tracer.kafka.CustomKafkaTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestClientException;
+
+import java.util.HashMap;
+import java.util.UUID;
+
+@Slf4j
+@Service
+public class SMSEventListener {
+
+    private final ApplicationContext context;
+
+    private SmsService smsService;
+
+    private CustomKafkaTemplate<String, SMSRequest> kafkaTemplate;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Value("${kafka.topics.expiry.sms}")
+    String expiredSmsTopic;
+
+    @Value("${kafka.topics.backup.sms}")
+    String backupSmsTopic;
+
+    @Value("${kafka.topics.error.sms}")
+    String errorSmsTopic;
+
+    @Value("${sms.enabled}")
+    Boolean smsEnable;
+
+
+    @Autowired
+    public SMSEventListener(
+            ApplicationContext context,
+            SmsService smsService,
+            CustomKafkaTemplate<String, SMSRequest> kafkaTemplate) {
+        this.smsService = smsService;
+        this.context = context;
+        this.kafkaTemplate = kafkaTemplate;
+    }
+
+    @KafkaListener(
+            topics = "${kafka.topics.notification.sms.name}"
+    )
+    public void process(HashMap<String, Object> consumerRecord) {
+        RequestContext.setId(UUID.randomUUID().toString());
+        SMSRequest request = null;
+        try {
+            if(!smsEnable){
+                log.info("Sms service is disable to enable the notification service set the value of sms.enable flag as true");
+            }
+            else{
+                request = objectMapper.convertValue(consumerRecord, SMSRequest.class);
+                if (request.getExpiryTime() != null && request.getCategory() == Category.OTP) {
+                    Long expiryTime = request.getExpiryTime();
+                    Long currentTime = System.currentTimeMillis();
+                    if (expiryTime < currentTime) {
+                        log.info("OTP Expired");
+                        if (!StringUtils.isEmpty(expiredSmsTopic))
+                            kafkaTemplate.send(expiredSmsTopic, request);
+                    } else {
+                        smsService.sendSMS(request.toDomain());
+                    }
+                } else {
+                    smsService.sendSMS(request.toDomain());
+                }
+            }
+
+        } catch (RestClientException rx) {
+            log.info("Going to backup SMS Service", rx);
+            if (!StringUtils.isEmpty(backupSmsTopic))
+                kafkaTemplate.send(backupSmsTopic, request);
+            else if (!StringUtils.isEmpty(errorSmsTopic)) {
+                kafkaTemplate.send(errorSmsTopic, request);
+            } else {
+                throw rx;
+            }
+        } catch (Exception ex) {
+            log.error("Sms service failed", ex);
+            if (!StringUtils.isEmpty(errorSmsTopic)) {
+                kafkaTemplate.send(errorSmsTopic, request);
+            } else {
+                throw ex;
+            }
+        }
+    }
+}
