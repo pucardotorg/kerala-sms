@@ -1,0 +1,26 @@
+name: kerala-sms workflow
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+  workflow_dispatch:
+jobs:
+  docker_image-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Setup Docker
+        uses: docker/setup-buildx-action@v1
+      # Login to Azure Container Registry
+      - name: Login to Azure Container Registry
+        run: docker login -u pucarsolutionsdev -p ${{ secrets.ACR_PASSWORD }} pucarsolutionsdev.azurecr.io
+      - name: Build and Push Docker image for etreasury
+        run: |
+          docker build  -t kerala-sms:v1.0.0-${{ github.sha }} -f build/maven/Dockerfile .
+          docker tag kerala-sms:v1.0.0-${{ github.sha }} pucarsolutionsdev.azurecr.io/kerala-sms:v1.0.0-${{ github.sha }}
+          docker push pucarsolutionsdev.azurecr.io/kerala-sms:v1.0.0-${{ github.sha }}
+
