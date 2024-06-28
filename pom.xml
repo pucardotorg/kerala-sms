@@ -156,7 +156,6 @@
                                             org.egov.web.notification.sms.consumer.KakfaListenerLoggingConfiguration
                                         </exclude>
                                         <exclude>org.egov.pgr.model.RequestContext</exclude>
-                                        <exclude>org.egov.web.notification.sms.services.ConsoleSMSService</exclude>
                                         <exclude>org.egov.web.notification.sms.config.SmsProperties</exclude>
                                         <exclude>org.egov.web.notification.sms.models.RequestContext</exclude>
                                     </excludes>
