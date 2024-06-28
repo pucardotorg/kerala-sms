@@ -13,6 +13,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.event.*;
 import org.springframework.context.*;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.env.*;
@@ -26,6 +27,7 @@ import javax.annotation.*;
 @Import(TracerConfiguration.class)
 @Slf4j
 @EnableKafka
+@ComponentScan(basePackages = "org.egov.web.notification.sms")
 public class EgovNotificationSmsApplication {
 
     @Autowired
