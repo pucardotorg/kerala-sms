@@ -182,10 +182,9 @@ public class CdacSmsClient {
             requestBodyMap.add("password", encryptedPassword);
             requestBodyMap.add("key", genratedhashKey);
             requestBodyMap.add("templateid", templateId);
-            log.info(responseEntity.getBody().toString());
-            HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(requestBodyMap, httpHeaders);
-            logger.info("Request Body Map: {}", requestBodyMap);
+            log.info("Request Body Map: {}", requestBodyMap);
 
+            HttpEntity<MultiValueMap<String, String>> requestEntity = new HttpEntity<>(requestBodyMap, httpHeaders);
             ResponseEntity<String> responseEntity = restTemplate.exchange(smsProviderURL, HttpMethod.POST, requestEntity, String.class);
 
             log.info(responseEntity.getBody().toString());
